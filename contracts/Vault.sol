@@ -57,6 +57,7 @@ contract Vault is VaultStorage {
     event RemoveToken(address tokenOut, uint256 outAmount, address tokenIn, uint256 inAmount, uint256 at);
     event MintWAI(address indexed minter, uint256 amount, uint256 at);
     event BurnWAI(address indexed minter, uint256 amount, uint256 at);
+    event WithdrawDust(address token, uint256 amount, uint256 at);
 
     /* Modifier */
     function _become(Proxy proxy) public {
@@ -433,5 +434,17 @@ contract Vault is VaultStorage {
         }
 
         _burnWAI(msg.sender, _amount);
+    }
+
+    function governanceWithdrawDust(address token) public {
+        require(msg.sender == admin || msg.sender == treasury, "only admin or treasury can");
+        
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        uint256 dust = balance.sub(tokenBalances[token]);
+        if (dust > 0) {
+            IERC20(token).safeTransfer(treasury, dust);
+
+            emit WithdrawDust(token, dust, block.timestamp);
+        }
     }
 }
