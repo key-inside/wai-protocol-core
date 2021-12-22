@@ -30,7 +30,7 @@ export const ContractInfo: ContractInfoType = {
   42: {
     // Internal contract
     WAI: {
-      address: "0x591777414856b8B01240f5F4803984a002E65C4D",
+      address: "0x9909358a55f337863FD5F9617d1f641E322cc713",
       abi: require("./abi/WAI.json"),
     },
     OracleWrapper: {
@@ -42,11 +42,11 @@ export const ContractInfo: ContractInfoType = {
       abi: require("./abi/UniswapV3PriceOracle.json"),
     },
     Vault: {
-      address: "0xaBe7c553ff95ad1Ea4C90F0EE0bffa705a21857e",
+      address: "0x70Ea3ecdbc20897C8a04818185a465BB54309551",
       abi: require("./abi/Vault.json"),
     },
     VaultImpl: {
-      address: "0xa159f208797C4358baa59c260c3547e836d180cC",
+      address: "0x88E1A3bb1f7abC4f6ebE627271805E006e202975",
       abi: require("./abi/Vault.json"),
     },
 

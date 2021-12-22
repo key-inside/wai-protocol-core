@@ -45,23 +45,19 @@ async function main() {
   // Single Mint Test
   // await vault
   //   .connect(treasury)
-  //   .mintWAI([pla.address], [utils.parseEther("100")], waiPrice);
+  //   .mintWAI([pla.address], [utils.parseEther("922")], waiPrice);
 
   // Multi Mint Test
   // await vault
   //   .connect(treasury)
   //   .mintWAI(
-  //     [wmlk.address, pla.address, wpci.address],
-  //     [
-  //       utils.parseUnits("50", 8),
-  //       utils.parseEther("10"),
-  //       utils.parseUnits("500", 8),
-  //     ],
+  //     [wpci.address, wmlk.address],
+  //     [utils.parseUnits("1010", 8), utils.parseUnits("844", 8)],
   //     waiPrice
   //   );
 
   // Burn Test
-  // await vault.connect(treasury).burnWAI(utils.parseEther("1200"), waiPrice);
+  // await vault.connect(treasury).burnWAI(utils.parseEther("100"), waiPrice);
 
   console.log(
     "wai balance = ",
