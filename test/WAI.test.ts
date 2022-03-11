@@ -427,6 +427,95 @@ describe("WAI", () => {
     });
   });
 
+  describe("test ll, max border", () => {
+    beforeEach("mint", async () => {
+      await vault.connect(operator).mintInitialAmount(utils.parseEther("10"));
+      await vault.connect(operator).setFeeRatio(0, 0);
+      await vault.connect(operator).changeTokenRatio(pla.address, 1000, 5000);
+      await vault.connect(operator).changeTokenRatio(mlk.address, 1000, 5000);
+      await vault.connect(operator).changeTokenRatio(pci.address, 1000, 5000);
+
+      await pla.mint(user.address, utils.parseEther("100000"));
+      await pla
+        .connect(user)
+        .approve(vault.address, ethers.constants.MaxUint256);
+      await mlk.mint(user.address, utils.parseUnits("300000", 8));
+      await mlk
+        .connect(user)
+        .approve(vault.address, ethers.constants.MaxUint256);
+      await pci.mint(user.address, utils.parseUnits("300000", 8));
+      await pci
+        .connect(user)
+        .approve(vault.address, ethers.constants.MaxUint256);
+    });
+    it("max border", async () => {
+      // tvl = 90000, pla = 30000
+      // + pla 30000 = tvl = 120000, pla = 60000, 50%
+      await vault.connect(user).mintWAI(
+        [pla.address],
+        [utils.parseEther("20000")], // $1.5
+        utils.parseEther("10")
+      );
+      let [_tvl, _validTokens, _ratios, _sum] =
+        await vault.getCurrentTokenRatio();
+      expect(_ratios[0]).to.eq(5000);
+
+      await expect(
+        vault
+          .connect(user)
+          .mintWAI(
+            [pla.address],
+            [utils.parseEther("100")],
+            utils.parseEther("10")
+          )
+      ).to.revertedWith("over ratio");
+      // tvl = 120000, mlk = 30000
+      // + mlk 40000 = tvl = 160000, mlk = 70000
+      await vault.connect(user).mintWAI(
+        [mlk.address],
+        [utils.parseUnits("20000", 8)], // $2
+        utils.parseEther("10")
+      );
+      [_tvl, _validTokens, _ratios, _sum] = await vault.getCurrentTokenRatio();
+      expect(_ratios[0]).to.eq(3750); // 6 / 16 = 3750
+      expect(_ratios[1]).to.eq(4375); // 7 / 16 = 4375
+      expect(_ratios[2]).to.eq(1875); // 3 / 16 = 1875
+    });
+    it("ll border", async () => {
+      // tvl = 90000, pla = 30000
+      // + pla 105000, mlk 105000 = tvl = 300000
+      await vault.connect(user).mintWAI(
+        [pla.address, mlk.address],
+        [utils.parseEther("70000"), utils.parseUnits("52500", 8)], // $1.5, $2
+        utils.parseEther("10")
+      );
+      let [_tvl, _validTokens, _ratios, _sum] =
+        await vault.getCurrentTokenRatio();
+      expect(_ratios[2]).to.eq(1000);
+
+      await expect(
+        vault
+          .connect(user)
+          .mintWAI(
+            [pla.address],
+            [utils.parseEther("100")],
+            utils.parseEther("10")
+          )
+      ).to.revertedWith("under ratio");
+      await vault
+        .connect(user)
+        .mintWAI(
+          [pci.address],
+          [utils.parseUnits("100000", 8)],
+          utils.parseEther("10")
+        );
+      [_tvl, _validTokens, _ratios, _sum] = await vault.getCurrentTokenRatio();
+      expect(_ratios[0]).to.eq(3375); // 13.5 / 40 = 3375
+      expect(_ratios[1]).to.eq(3375); // 13.5 / 40 = 3375
+      expect(_ratios[2]).to.eq(3250); // 13 / 40 = 3250
+    });
+  });
+
   describe("remove token test", () => {
     beforeEach("mint", async () => {
       await vault.connect(operator).mintInitialAmount(utils.parseEther("10"));
