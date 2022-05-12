@@ -9,7 +9,7 @@ contract OracleWrapper is Operator {
 
     event SetPriceOracle(address indexed asset, address oldOracle, address newOracle);
 
-    function setPriceOracle(address asset, IPriceOracle oracle) public onlyOperator {
+    function setPriceOracle(address asset, IPriceOracle oracle) external onlyOperator {
         require(asset != address(0), "!asset");
         require(address(oracle) != address(0), "!oracle");
 
@@ -19,7 +19,7 @@ contract OracleWrapper is Operator {
         emit SetPriceOracle(asset, address(oldOracle), address(oracle));
     }
 
-    function getPrice(address asset) public view returns (uint256) {
+    function getPrice(address asset) external view returns (uint256) {
         IPriceOracle o = priceOracles[asset];
         
         require(address(o) != address(0), "!oracle");

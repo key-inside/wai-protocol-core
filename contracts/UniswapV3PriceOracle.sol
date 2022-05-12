@@ -16,13 +16,20 @@ contract UniswapV3PriceOracle is Operator {
     mapping (address => address) public pairs;
     uint32 defaultTWAPInterval;
 
-    function setPair(address asset, address pair) public onlyOperator {
+    event SetPair(address asset, address pair, uint256 at);
+    event SetTWAPInterval(uint32 interval, uint256 at);
+
+    function setPair(address asset, address pair) external onlyOperator {
         pairs[asset] = pair;
+
+        emit SetPair(asset, pair, block.timestamp);
     }
 
-    function setTWAPInterval(uint32 interval) public onlyOperator {
+    function setTWAPInterval(uint32 interval) external onlyOperator {
         require(interval >= 0, "!interval");
         defaultTWAPInterval = interval;
+
+        emit SetTWAPInterval(interval, block.timestamp);
     }
 
     function getSqrtTwapX96(address uniswapV3Pool, uint32 twapInterval) public view returns (uint160 sqrtPriceX96) {

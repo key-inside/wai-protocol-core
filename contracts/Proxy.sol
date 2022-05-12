@@ -97,8 +97,12 @@ contract Proxy is ProxyStorage {
 }
 
 contract ProxyImpl is ProxyStorage {
+    event Become(address proxy, uint256 at);
+
     function _become(Proxy proxy) public {
         require(msg.sender == proxy.admin(), "only admin can change brains");
         proxy._acceptImplementation();
+
+        emit Become(address(proxy), block.timestamp);
     }
 }

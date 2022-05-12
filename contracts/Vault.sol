@@ -46,10 +46,13 @@ contract Vault is VaultStorage {
     uint256 public constant tokenRatioTOTAL = 10000; // 100%
 
     event Initialized(address indexed executor, uint256 at);
+    event Become(address proxy, uint256 at);
     event MintInitialAmount(address indexed treasury, uint256 price, uint256 amount, uint256 at);
     event NewPriceOracle(IPriceOracle oldPriceOracle, IPriceOracle newPriceOracle);
     event NewPausedGuardian(address oldPausedGuardian, address newPausedGuardian);
     event ActionProtocolPaused(bool state);
+    event NewFeeRatio(uint256 oldMintFeeRatio, uint256 oldBurnFeeRatio, uint256 mintFeeRatio, uint256 burnFeeRatio, uint256 at);
+    event ChangeFeeSetter(address oldFeeSetter, address feeSetter, uint256 at);
     event AddSupportToken(address token, uint256 tokenRatioLL, uint256 tokenRatioMAX, uint256 at);
     event ChangeTokenRatio(address token, uint256 tokenRatioLL, uint256 tokenRatioMAX, uint256 at);
     event EnableToken(address token, uint256 at);
@@ -63,6 +66,8 @@ contract Vault is VaultStorage {
     function _become(Proxy proxy) public {
         require(msg.sender == proxy.admin(), "only admin can change brains");
         proxy._acceptImplementation();
+
+        emit Become(address(proxy), block.timestamp);
     }
 
     modifier onlyAdmin() {
@@ -88,7 +93,7 @@ contract Vault is VaultStorage {
     }
 
     /* Admin Function */
-    function initialize(address _wai, address _treasury, address _feeSetter) public onlyAdmin {
+    function initialize(address _wai, address _treasury, address _feeSetter) external onlyAdmin {
         require(initialized == false, "already initialized");
         require(_wai != address(0), "!_wai");
         require(_treasury != address(0), "!_treasury");
@@ -107,7 +112,7 @@ contract Vault is VaultStorage {
         emit Initialized(msg.sender, block.timestamp);
     }
 
-    function setPriceOracle(IPriceOracle _oracle) public onlyAdmin {
+    function setPriceOracle(IPriceOracle _oracle) external onlyAdmin {
         require(address(_oracle) != address(0));
         
         IPriceOracle oldOracle = oracle;
@@ -116,7 +121,7 @@ contract Vault is VaultStorage {
         emit NewPriceOracle(oldOracle, oracle);
     }
 
-    function setPausedGuardian(address _pausedGuardian) public {
+    function setPausedGuardian(address _pausedGuardian) external {
         require(_pausedGuardian != address(0), "!pausedGuardian");
         require(msg.sender == pausedGuardian || msg.sender == admin, "only pausedGuardian or admin can");
 
@@ -126,29 +131,39 @@ contract Vault is VaultStorage {
         emit NewPausedGuardian(oldPausedGuardian, pausedGuardian);
     }
 
-    function setProtocolPaused(bool state) public {
+    function setProtocolPaused(bool state) external {
         require(msg.sender == pausedGuardian || msg.sender == admin, "only pausedGuardian or admin can");
         protocolPaused = state;
 
         emit ActionProtocolPaused(state);
     }
 
-    function setFeeRatio(uint256 _mintFeeRatio, uint256 _burnFeeRatio) public {
+    function setFeeRatio(uint256 _mintFeeRatio, uint256 _burnFeeRatio) external {
         require(msg.sender == admin || msg.sender == feeSetter, "not allowed");
         require(_mintFeeRatio >= 0 && _mintFeeRatio <= 300, "out or range"); // 0% ~ 3%
         require(_burnFeeRatio >= 0 && _burnFeeRatio <= 300, "out or range"); // 0% ~ 3%
 
+        uint256 oldMintFeeRatio = mintFeeRatio;
+        uint256 oldBurnFeeRatio = burnFeeRatio;
+
         mintFeeRatio = _mintFeeRatio;
         burnFeeRatio = _burnFeeRatio;
+
+        emit NewFeeRatio(oldMintFeeRatio, oldBurnFeeRatio, mintFeeRatio, burnFeeRatio, block.timestamp);
     }
 
-    function changeFeeSetter(address _feeSetter) public {
+    function changeFeeSetter(address _feeSetter) external {
         require(msg.sender == admin || msg.sender == feeSetter, "not allowed");
         require(feeSetter != address(0), "!_feeSetter");
+
+        address oldFeeSetter = feeSetter;
+
         feeSetter = _feeSetter;
+
+        emit ChangeFeeSetter(oldFeeSetter, feeSetter, block.timestamp);
     }
 
-    function supportToken(address _token, uint256 _tokenRatioLL, uint256 _tokenRatioMax) public onlyAdmin {
+    function supportToken(address _token, uint256 _tokenRatioLL, uint256 _tokenRatioMax) external onlyAdmin {
         require(!supportTokens[_token], "already supported");
         require(_tokenRatioLL >= 0, "out of range");
         require(_tokenRatioMax >= _tokenRatioLL && _tokenRatioMax <= tokenRatioTOTAL, "out of range");
@@ -165,7 +180,7 @@ contract Vault is VaultStorage {
         emit AddSupportToken(_token, _tokenRatioLL, _tokenRatioMax, block.timestamp);
     }
 
-    function enableToken(address _token) public onlyAdmin {
+    function enableToken(address _token) external onlyAdmin {
         require(supportTokens[_token], "not supported");
         require(!mintableTokens[_token], "already mintable");
 
@@ -175,7 +190,7 @@ contract Vault is VaultStorage {
     }
 
 
-    function disableToken(address _token) public onlyAdmin {
+    function disableToken(address _token) external onlyAdmin {
         require(supportTokens[_token], "not supported");
         require(mintableTokens[_token], "not mintable");
 
@@ -184,7 +199,7 @@ contract Vault is VaultStorage {
         emit DisableToken(_token, block.timestamp);
     }
 
-    function changeTokenRatio(address _token, uint256 _tokenRatioLL, uint256 _tokenRatioMax) public onlyAdmin {
+    function changeTokenRatio(address _token, uint256 _tokenRatioLL, uint256 _tokenRatioMax) external onlyAdmin {
         require(supportTokens[_token], "not supported");
         require(_tokenRatioLL >= 0, "out of range");
         require(_tokenRatioMax >= _tokenRatioLL && _tokenRatioMax <= tokenRatioTOTAL, "out of range");
@@ -195,7 +210,7 @@ contract Vault is VaultStorage {
         emit AddSupportToken(_token, _tokenRatioLL, _tokenRatioMax, block.timestamp);
     }
 
-    function mintInitialAmount(uint256 _price) public onlyAdmin {
+    function mintInitialAmount(uint256 _price) external onlyAdmin {
         require(IERC20(wai).totalSupply() == 0, "already minted");
 
         uint256 tvl;
@@ -216,7 +231,7 @@ contract Vault is VaultStorage {
         emit MintInitialAmount(treasury, _price, amount, block.timestamp);
     }
 
-    function emergencyWithdraw(address _token) public onlyAdmin {
+    function emergencyWithdraw(address _token) external onlyAdmin {
         require(IERC20(wai).totalSupply() == 0, "already minted");
         require(treasury != address(0), "!treasury");
 
@@ -238,7 +253,7 @@ contract Vault is VaultStorage {
         uint256 decimalsIn;
     }
 
-    function removeToken(address _tokenOut, address _tokenIn) public onlyAdmin {
+    function removeToken(address _tokenOut, address _tokenIn) external onlyAdmin {
         require(supportTokens[_tokenOut], "not supported token");
         require(supportTokens[_tokenIn], "not supported token");
 
@@ -261,7 +276,7 @@ contract Vault is VaultStorage {
         vars.decimalsIn = IERC20Detailed(_tokenIn).decimals();
 
         vars.balanceIn = vars.balanceInETH.div(10**(18-vars.decimalsIn));
-        uint256 vaultBalance = IERC20(_tokenIn).balanceOf(address(this));
+        uint256 vaultBalance = IERC20(_tokenIn).balanceOf(address(this)).sub(tokenBalances[_tokenIn]);
         require(vaultBalance >= vars.balanceIn, "insufficient inToken balance");
 
         IERC20(_tokenOut).safeTransfer(treasury, vars.balanceOut);
@@ -351,7 +366,7 @@ contract Vault is VaultStorage {
         uint256 sumRatio;
     }
 
-    function mintWAI(address[] memory _tokens, uint256[] memory _amounts, uint256 _targetPrice) public nonReentrant onlyProtocolAllowed {
+    function mintWAI(address[] memory _tokens, uint256[] memory _amounts, uint256 _targetPrice) external nonReentrant onlyProtocolAllowed {
         require(_tokens.length == _amounts.length, "wrong params");
 
         uint256 waiPrice = getWAIPrice(); // current price
@@ -403,7 +418,7 @@ contract Vault is VaultStorage {
         address[] validTokens;
     }
 
-    function burnWAI(uint256 _amount, uint256 _targetPrice) public nonReentrant onlyProtocolAllowed {
+    function burnWAI(uint256 _amount, uint256 _targetPrice) external nonReentrant onlyProtocolAllowed {
         BurnWAILocalVars memory vars;
 
         vars.tvl = getTotalLockValue();
@@ -436,7 +451,7 @@ contract Vault is VaultStorage {
         _burnWAI(msg.sender, _amount);
     }
 
-    function governanceWithdrawDust(address token) public {
+    function governanceWithdrawDust(address token) external {
         require(msg.sender == admin || msg.sender == treasury, "only admin or treasury can");
         
         uint256 balance = IERC20(token).balanceOf(address(this));
